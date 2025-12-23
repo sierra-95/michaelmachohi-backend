@@ -18,12 +18,14 @@
 			"binding": "michaelmachohi",
 			"database_name": "michaelmachohi",
 			"database_id": "0c38f2b4-36b0-4130-82f4-cb12577acdc2",
+			"remote": true
 		}
 	],
 	"r2_buckets": [
 		{
 			"binding": "MEDIA_BUCKET",
-			"bucket_name": "michaelmachohi-com"
+			"bucket_name": "michaelmachohi-com",
+			"remote": true
 		}
 	],
 	/**

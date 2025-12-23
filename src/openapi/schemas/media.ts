@@ -17,3 +17,9 @@ export const CreateUserMediaSchema = UserMediaSchema.omit({
   url: true,
   created_at: true,
 }).openapi('Upload Media Schema');
+
+export const DeleteUserMediaSchema = UserMediaSchema.pick({
+  id: true,
+  bucket: true,
+  bucket_url: true,
+}).openapi('Delete Media Schema');

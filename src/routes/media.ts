@@ -1,11 +1,12 @@
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { Context } from 'hono';
 import {Env, Variables, BucketBindings} from '../types';
+import {eq} from 'drizzle-orm'
 //#######################################
 import {getDb} from '../db/engine/client';
 import {userMedia} from '../db/schema';
-import {MediaUpload} from '../openapi/media';
-import { CreateUserMediaSchema } from '../openapi/schemas/media';
+import {MediaUpload, MediaDelete} from '../openapi/media';
+import { CreateUserMediaSchema, DeleteUserMediaSchema } from '../openapi/schemas/media';
 
 const Media = new OpenAPIHono<{ Bindings: Env ; Variables: Variables }>()
 
@@ -100,5 +101,54 @@ Media.openapi(MediaUpload, async (c: Context) => {
     return c.text('Upload failed', 500)
   }
 })
+
+
+Media.openapi(MediaDelete, async (c: Context) => {
+  try {
+    const body = await c.req.json();
+
+    const metadata = DeleteUserMediaSchema.parse({
+      id: body.id,
+      bucket: body.bucket,
+      bucket_url: body.bucket_url,
+    })
+
+    const db = getDb(c.env);
+
+    const media = await db
+      .select()
+      .from(userMedia)
+      .where(eq(userMedia.id, metadata.id))
+      .get();
+
+    if (!media) {
+      return c.text('Media not found', 404);
+    }
+
+    const allowedBuckets = Object.keys(c.env).filter((k) =>
+      k.endsWith('_BUCKET')
+    ) as BucketBindings<Env>[];
+
+
+    if (!allowedBuckets.includes(metadata.bucket as any)) {
+      return c.text('Invalid bucket', 403)
+    }
+
+    const r2 = c.env[metadata.bucket as BucketBindings<Env>];
+
+    const urlObj = new URL(media.url);
+    const key = urlObj.pathname.slice(1);
+
+    await r2.delete(key);
+
+    await db.delete(userMedia).where(eq(userMedia.id, metadata.id));
+
+    return c.text('Delete successful', 200);
+
+  } catch (err) {
+    console.error('Delete error:', err);
+    return c.text('Delete failed', 500);
+  }
+});
 
 export default Media;
