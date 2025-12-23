@@ -1,7 +1,10 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { Scalar } from '@scalar/hono-api-reference'
-import Account from './routes/account';
 import { cors } from 'hono/cors';
+
+
+import Account from './routes/account';
+import Media from './routes/media';
 
 const app = new OpenAPIHono();
 app.openAPIRegistry.registerComponent("securitySchemes", "OAuth2" ,{
@@ -38,6 +41,7 @@ app.use('*',
   })
 )
 app.route('/account', Account);
+app.route('/media', Media);
 
 export default app;
 

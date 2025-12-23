@@ -16641,6 +16641,92 @@ var Scalar = /* @__PURE__ */ __name((configOrResolver) => {
   };
 }, "Scalar");
 
+// node_modules/hono/dist/middleware/cors/index.js
+var cors = /* @__PURE__ */ __name((options) => {
+  const defaults = {
+    origin: "*",
+    allowMethods: ["GET", "HEAD", "PUT", "POST", "DELETE", "PATCH"],
+    allowHeaders: [],
+    exposeHeaders: []
+  };
+  const opts = {
+    ...defaults,
+    ...options
+  };
+  const findAllowOrigin = ((optsOrigin) => {
+    if (typeof optsOrigin === "string") {
+      if (optsOrigin === "*") {
+        return () => optsOrigin;
+      } else {
+        return (origin) => optsOrigin === origin ? origin : null;
+      }
+    } else if (typeof optsOrigin === "function") {
+      return optsOrigin;
+    } else {
+      return (origin) => optsOrigin.includes(origin) ? origin : null;
+    }
+  })(opts.origin);
+  const findAllowMethods = ((optsAllowMethods) => {
+    if (typeof optsAllowMethods === "function") {
+      return optsAllowMethods;
+    } else if (Array.isArray(optsAllowMethods)) {
+      return () => optsAllowMethods;
+    } else {
+      return () => [];
+    }
+  })(opts.allowMethods);
+  return /* @__PURE__ */ __name(async function cors2(c, next) {
+    function set2(key, value) {
+      c.res.headers.set(key, value);
+    }
+    __name(set2, "set");
+    const allowOrigin = await findAllowOrigin(c.req.header("origin") || "", c);
+    if (allowOrigin) {
+      set2("Access-Control-Allow-Origin", allowOrigin);
+    }
+    if (opts.credentials) {
+      set2("Access-Control-Allow-Credentials", "true");
+    }
+    if (opts.exposeHeaders?.length) {
+      set2("Access-Control-Expose-Headers", opts.exposeHeaders.join(","));
+    }
+    if (c.req.method === "OPTIONS") {
+      if (opts.origin !== "*") {
+        set2("Vary", "Origin");
+      }
+      if (opts.maxAge != null) {
+        set2("Access-Control-Max-Age", opts.maxAge.toString());
+      }
+      const allowMethods = await findAllowMethods(c.req.header("origin") || "", c);
+      if (allowMethods.length) {
+        set2("Access-Control-Allow-Methods", allowMethods.join(","));
+      }
+      let headers = opts.allowHeaders;
+      if (!headers?.length) {
+        const requestHeaders = c.req.header("Access-Control-Request-Headers");
+        if (requestHeaders) {
+          headers = requestHeaders.split(/\s*,\s*/);
+        }
+      }
+      if (headers?.length) {
+        set2("Access-Control-Allow-Headers", headers.join(","));
+        c.res.headers.append("Vary", "Access-Control-Request-Headers");
+      }
+      c.res.headers.delete("Content-Length");
+      c.res.headers.delete("Content-Type");
+      return new Response(null, {
+        headers: c.res.headers,
+        status: 204,
+        statusText: "No Content"
+      });
+    }
+    await next();
+    if (opts.origin !== "*") {
+      c.header("Vary", "Origin", { append: true });
+    }
+  }, "cors2");
+}, "cors");
+
 // node_modules/jose/dist/webapi/lib/buffer_utils.js
 var encoder = new TextEncoder();
 var decoder = new TextDecoder();
@@ -23841,6 +23927,17 @@ var users = sqliteTable("users", {
   created_at: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
   updated_at: text("updated_at").notNull().default("CURRENT_TIMESTAMP")
 });
+var userMedia = sqliteTable("user_media", {
+  id: text("id").primaryKey(),
+  user_id: text("user_id"),
+  anonymous_id: text("anonymous_id"),
+  r2_key: text("r2_key").notNull(),
+  url: text("url").notNull(),
+  original_name: text("original_name").notNull(),
+  mime_type: text("mime_type").notNull(),
+  size_bytes: integer2("size_bytes").notNull(),
+  created_at: text("created_at").notNull().default("CURRENT_TIMESTAMP")
+});
 
 // src/db/engine/client.ts
 var getDb = /* @__PURE__ */ __name((env) => drizzle(env.michaelmachohi, { schema: { users } }), "getDb");
@@ -23873,16 +23970,16 @@ var authMiddleware = /* @__PURE__ */ __name(async (c, next) => {
 var UserSchema = external_exports.object({
   id: external_exports.string(),
   username: external_exports.string(),
-  email: external_exports.string(),
+  email: external_exports.email(),
   password: external_exports.string()
 }).openapi("User");
 var LoginSchema = UserSchema.omit({
   id: true,
   username: true
-});
+}).openapi("Login Schema");
 var AccountSchema = UserSchema.omit({
   password: true
-});
+}).openapi("Account Schema");
 
 // src/openapi/account.ts
 var login = createRoute({
@@ -24017,91 +24114,155 @@ account.openapi(me, async (c) => {
 });
 var account_default = account;
 
-// node_modules/hono/dist/middleware/cors/index.js
-var cors = /* @__PURE__ */ __name((options) => {
-  const defaults = {
-    origin: "*",
-    allowMethods: ["GET", "HEAD", "PUT", "POST", "DELETE", "PATCH"],
-    allowHeaders: [],
-    exposeHeaders: []
-  };
-  const opts = {
-    ...defaults,
-    ...options
-  };
-  const findAllowOrigin = ((optsOrigin) => {
-    if (typeof optsOrigin === "string") {
-      if (optsOrigin === "*") {
-        return () => optsOrigin;
-      } else {
-        return (origin) => optsOrigin === origin ? origin : null;
-      }
-    } else if (typeof optsOrigin === "function") {
-      return optsOrigin;
-    } else {
-      return (origin) => optsOrigin.includes(origin) ? origin : null;
-    }
-  })(opts.origin);
-  const findAllowMethods = ((optsAllowMethods) => {
-    if (typeof optsAllowMethods === "function") {
-      return optsAllowMethods;
-    } else if (Array.isArray(optsAllowMethods)) {
-      return () => optsAllowMethods;
-    } else {
-      return () => [];
-    }
-  })(opts.allowMethods);
-  return /* @__PURE__ */ __name(async function cors2(c, next) {
-    function set2(key, value) {
-      c.res.headers.set(key, value);
-    }
-    __name(set2, "set");
-    const allowOrigin = await findAllowOrigin(c.req.header("origin") || "", c);
-    if (allowOrigin) {
-      set2("Access-Control-Allow-Origin", allowOrigin);
-    }
-    if (opts.credentials) {
-      set2("Access-Control-Allow-Credentials", "true");
-    }
-    if (opts.exposeHeaders?.length) {
-      set2("Access-Control-Expose-Headers", opts.exposeHeaders.join(","));
-    }
-    if (c.req.method === "OPTIONS") {
-      if (opts.origin !== "*") {
-        set2("Vary", "Origin");
-      }
-      if (opts.maxAge != null) {
-        set2("Access-Control-Max-Age", opts.maxAge.toString());
-      }
-      const allowMethods = await findAllowMethods(c.req.header("origin") || "", c);
-      if (allowMethods.length) {
-        set2("Access-Control-Allow-Methods", allowMethods.join(","));
-      }
-      let headers = opts.allowHeaders;
-      if (!headers?.length) {
-        const requestHeaders = c.req.header("Access-Control-Request-Headers");
-        if (requestHeaders) {
-          headers = requestHeaders.split(/\s*,\s*/);
+// src/openapi/schemas/media.ts
+var UserMediaSchema = external_exports.object({
+  id: external_exports.string(),
+  user_id: external_exports.string().nullable().optional(),
+  anonymous_id: external_exports.string().nullable().optional(),
+  bucket: external_exports.string(),
+  bucket_url: external_exports.url(),
+  r2_key: external_exports.string(),
+  url: external_exports.url(),
+  original_name: external_exports.string(),
+  mime_type: external_exports.string().openapi({
+    example: "image/png"
+  }),
+  size_bytes: external_exports.number().int().openapi({
+    example: 345678
+  }),
+  created_at: external_exports.string().openapi({
+    example: "2025-09-23T12:34:56Z"
+  })
+}).openapi("UserMedia");
+var CreateUserMediaSchema = UserMediaSchema.omit({
+  id: true,
+  url: true,
+  original_name: true,
+  mime_type: true,
+  size_bytes: true,
+  created_at: true
+}).openapi("Upload Media Schema");
+
+// src/openapi/media.ts
+var MediaUpload = createRoute({
+  method: "post",
+  path: "/upload",
+  tags: ["Media"],
+  request: {
+    body: {
+      required: true,
+      content: {
+        "multipart/form-data": {
+          schema: CreateUserMediaSchema
         }
       }
-      if (headers?.length) {
-        set2("Access-Control-Allow-Headers", headers.join(","));
-        c.res.headers.append("Vary", "Access-Control-Request-Headers");
+    }
+  },
+  responses: {
+    201: {
+      description: "Upload successful",
+      content: {
+        "text/plain": {
+          schema: external_exports.string()
+        }
       }
-      c.res.headers.delete("Content-Length");
-      c.res.headers.delete("Content-Type");
-      return new Response(null, {
-        headers: c.res.headers,
-        status: 204,
-        statusText: "No Content"
-      });
+    },
+    400: {
+      description: "Upload failed",
+      content: {
+        "text/plain": {
+          schema: external_exports.string()
+        }
+      }
+    },
+    500: {
+      description: "Upload failed",
+      content: {
+        "text/plain": {
+          schema: external_exports.string()
+        }
+      }
     }
-    await next();
-    if (opts.origin !== "*") {
-      c.header("Vary", "Origin", { append: true });
+  }
+});
+
+// src/routes/media.ts
+var Media = new OpenAPIHono();
+Media.openapi(MediaUpload, async (c) => {
+  try {
+    const contentType = c.req.header("content-type") || "";
+    if (!contentType.includes("multipart/form-data")) {
+      return c.text("Expected multipart/form-data", 400);
     }
-  }, "cors2");
-}, "cors");
+    const body = await c.req.parseBody({ all: true });
+    const files = body.files;
+    const fileArray = (Array.isArray(files) ? files : [files]).filter(Boolean);
+    if (fileArray.length === 0) {
+      return c.text("No files provided", 400);
+    }
+    const metadata = CreateUserMediaSchema.parse({
+      user_id: body.user_id,
+      anonymous_id: body.anonymous_id,
+      bucket: body.bucket,
+      bucket_url: body.bucket_url,
+      r2_key: body.r2_key
+    });
+    if (!metadata.bucket || !metadata.bucket_url || !metadata.r2_key) {
+      return c.text("Missing required upload fields", 400);
+    }
+    if (!metadata.user_id && !metadata.anonymous_id) {
+      return c.text("Either user_id or anonymous_id must be provided", 400);
+    }
+    const allowedBuckets = Object.keys(c.env).filter(
+      (k) => c.env[k] instanceof R2Bucket
+    );
+    if (!allowedBuckets.includes(metadata.bucket)) {
+      return c.text("Invalid bucket", 400);
+    }
+    const r2 = c.env[metadata.bucket];
+    const object_url = metadata.bucket_url + "/" + metadata.r2_key;
+    const uploadResults = await Promise.all(
+      fileArray.map(async (file2) => {
+        const uuid3 = crypto.randomUUID();
+        await r2.put(object_url, file2.stream(), {
+          httpMetadata: {
+            contentType: file2.type
+          }
+        });
+        return {
+          id: uuid3,
+          user_id: metadata.user_id,
+          anonymous_id: metadata.anonymous_id,
+          bucket: metadata.bucket,
+          bucket_url: metadata.bucket_url,
+          r2_key: metadata.r2_key,
+          url: object_url,
+          original_name: file2.name,
+          mime_type: file2.type,
+          size_bytes: file2.size
+        };
+      })
+    );
+    const db = getDb(c.env);
+    await db.insert(userMedia).values(
+      uploadResults.map((f) => ({
+        id: f.id,
+        user_id: f.user_id || null,
+        anonymous_id: f.anonymous_id || null,
+        r2_key: f.r2_key,
+        url: f.url,
+        original_name: f.original_name,
+        mime_type: f.mime_type,
+        size_bytes: f.size_bytes
+      }))
+    );
+    return c.text("Upload successful", 201);
+  } catch (err) {
+    console.error("Upload error:", err);
+    return c.text("Upload failed", 500);
+  }
+});
+var media_default = Media;
 
 // src/index.ts
 var app = new OpenAPIHono();
@@ -24140,6 +24301,7 @@ app.use(
   })
 );
 app.route("/account", account_default);
+app.route("/media", media_default);
 var src_default = app;
 
 // node_modules/wrangler/templates/middleware/middleware-ensure-req-body-drained.ts
@@ -24183,7 +24345,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-KEClE4/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-Bj8Vz6/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -24215,7 +24377,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-KEClE4/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-Bj8Vz6/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

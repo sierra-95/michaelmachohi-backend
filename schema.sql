@@ -6,6 +6,19 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS user_media (
+  id TEXT PRIMARY KEY,                       
+  user_id TEXT NULL,  
+  anonymous_id TEXT NULL,                  
+  r2_key TEXT NOT NULL,                 
+  url TEXT NOT NULL,                        
+  original_name TEXT NOT NULL,               
+  mime_type TEXT NOT NULL,                   
+  size_bytes INTEGER NOT NULL,            
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 INSERT INTO users (id, email, password)
 VALUES (
   'f47ac10b-58cc-4372-a567-0e02b2c3d479',
