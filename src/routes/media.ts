@@ -153,14 +153,14 @@ Media.openapi(MediaUpload, async (c: Context) => {
             original_name: file.name,
             mime_type: file.type,
             size_bytes: file.size,
-            code: 201,
+            code: 201 as const,
           }
         } catch (err) {
           return {
             original_name: file.name,
             mime_type: file.type,
             size_bytes: file.size,
-            code: 500,
+            code: 500 as const,
           }
         }
       })

@@ -25239,7 +25239,7 @@ var MediaUpload = createRoute({
               original_name: external_exports.string(),
               mime_type: external_exports.string(),
               size_bytes: external_exports.number(),
-              code: external_exports.number()
+              code: external_exports.union([external_exports.literal(201), external_exports.literal(500)])
             })
           )
         }

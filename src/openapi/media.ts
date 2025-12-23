@@ -86,7 +86,7 @@ export const MediaUpload = createRoute({
                             original_name: z.string(),
                             mime_type: z.string(),
                             size_bytes: z.number(),
-                            code: z.number(),
+                            code: z.union([z.literal(201), z.literal(500)]),
                         })
                     )
                 }
