@@ -21,7 +21,7 @@ export const CreateUserMediaSchema = UserMediaSchema.omit({
 export const GetUserMediaSchema = UserMediaSchema.pick({
   user_id: true,
   anonymous_id: true,
-}).openapi('Media Schema: GET');
+});
 
 export const GetUserMediaResponseSchema = UserMediaSchema.omit({
   bucket: true,
@@ -32,7 +32,7 @@ export const GetUserMediaResponseSchema = UserMediaSchema.omit({
   mime_type: z.string(),
   size_bytes: z.number(),
 
-}).openapi('Media Schema: GET Response');
+}).openapi('Media Schema: GET');
 
 export const DeleteUserMediaSchema = UserMediaSchema.pick({
   bucket: true,

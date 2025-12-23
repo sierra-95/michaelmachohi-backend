@@ -25137,7 +25137,7 @@ var CreateUserMediaSchema = UserMediaSchema.omit({
 var GetUserMediaSchema = UserMediaSchema.pick({
   user_id: true,
   anonymous_id: true
-}).openapi("Media Schema: GET");
+});
 var GetUserMediaResponseSchema = UserMediaSchema.omit({
   bucket: true,
   bucket_url: true,
@@ -25146,7 +25146,7 @@ var GetUserMediaResponseSchema = UserMediaSchema.omit({
   original_name: external_exports.string(),
   mime_type: external_exports.string(),
   size_bytes: external_exports.number()
-}).openapi("Media Schema: GET Response");
+}).openapi("Media Schema: GET");
 var DeleteUserMediaSchema = UserMediaSchema.pick({
   bucket: true,
   bucket_url: true
