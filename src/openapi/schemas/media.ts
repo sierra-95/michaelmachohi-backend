@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 export const UserMediaSchema = z.object({
-  id: z.string(),
-  user_id: z.string().nullable().optional(),
-  anonymous_id: z.string().nullable().optional(),
+  id: z.uuid(),
+  user_id: z.uuid().nullable().optional(),
+  anonymous_id: z.uuid().nullable().optional(),
   bucket: z.string(),
   bucket_url: z.url(),
   r2_key: z.string(),

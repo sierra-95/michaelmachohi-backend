@@ -44,6 +44,10 @@ Media.openapi(MediaGet, async (c: Context) => {
         .where(eq(userMedia.anonymous_id, anonymousId));
     }
 
+    if (media.length === 0) {
+      return c.text('No media found for the provided identifier', 404);
+    }
+
     const result = {
       Audio: [] as typeof media,
       Documents: [] as typeof media,
@@ -196,7 +200,7 @@ Media.openapi(MediaDelete, async (c: Context) => {
       .get();
 
     if (!media) {
-      return c.text('Media not found', 404);
+      return c.text('No media found for the provided identifier', 404);
     }
 
     const allowedBuckets = Object.keys(c.env).filter((k) =>

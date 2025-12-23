@@ -3,7 +3,7 @@ import { CreateUserMediaSchema, DeleteUserMediaSchema, GetUserMediaSchema, GetUs
 
 export const MediaGet = createRoute({
   method: 'get',
-  path: '/fetch',
+  path: '/get',
   tags: ['Media'],
   request: {
     query: GetUserMediaSchema
@@ -32,6 +32,14 @@ export const MediaGet = createRoute({
         },
         401:{
             description : "Unauthorized: Missing user identification",
+            content: {
+                'text/plain': {
+                    schema: z.string()
+                }
+            }
+        },
+        404:{
+            description : "No media found for the provided identifier",
             content: {
                 'text/plain': {
                     schema: z.string()
@@ -139,7 +147,7 @@ export const MediaDelete = createRoute({
             }
         },
         404:{
-            description : "Media not found",
+            description : "No media found for the provided identifier",
             content: {
                 'text/plain': {
                     schema: z.string()

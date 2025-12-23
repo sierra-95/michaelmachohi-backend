@@ -25119,9 +25119,9 @@ var account_default = account;
 
 // src/openapi/schemas/media.ts
 var UserMediaSchema = external_exports.object({
-  id: external_exports.string(),
-  user_id: external_exports.string().nullable().optional(),
-  anonymous_id: external_exports.string().nullable().optional(),
+  id: external_exports.uuid(),
+  user_id: external_exports.uuid().nullable().optional(),
+  anonymous_id: external_exports.uuid().nullable().optional(),
   bucket: external_exports.string(),
   bucket_url: external_exports.url(),
   r2_key: external_exports.string(),
@@ -25156,7 +25156,7 @@ var DeleteUserMediaSchema = UserMediaSchema.pick({
 // src/openapi/media.ts
 var MediaGet = createRoute({
   method: "get",
-  path: "/fetch",
+  path: "/get",
   tags: ["Media"],
   request: {
     query: GetUserMediaSchema
@@ -25185,6 +25185,14 @@ var MediaGet = createRoute({
     },
     401: {
       description: "Unauthorized: Missing user identification",
+      content: {
+        "text/plain": {
+          schema: external_exports.string()
+        }
+      }
+    },
+    404: {
+      description: "No media found for the provided identifier",
       content: {
         "text/plain": {
           schema: external_exports.string()
@@ -25290,7 +25298,7 @@ var MediaDelete = createRoute({
       }
     },
     404: {
-      description: "Media not found",
+      description: "No media found for the provided identifier",
       content: {
         "text/plain": {
           schema: external_exports.string()
@@ -25330,6 +25338,9 @@ Media.openapi(MediaGet, async (c) => {
     } else {
       const anonymousId = metadata.anonymous_id;
       media = await db.select().from(userMedia).where(eq(userMedia.anonymous_id, anonymousId));
+    }
+    if (media.length === 0) {
+      return c.text("No media found for the provided identifier", 404);
     }
     const result = {
       Audio: [],
@@ -25448,7 +25459,7 @@ Media.openapi(MediaDelete, async (c) => {
     const db = getDb(c.env);
     const media = await db.select().from(userMedia).where(eq(userMedia.id, metadata.id)).get();
     if (!media) {
-      return c.text("Media not found", 404);
+      return c.text("No media found for the provided identifier", 404);
     }
     const allowedBuckets = Object.keys(c.env).filter(
       (k) => k.endsWith("_BUCKET")
