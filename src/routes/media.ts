@@ -193,16 +193,6 @@ Media.openapi(MediaDelete, async (c: Context) => {
 
     const db = getDb(c.env);
 
-    const media = await db
-      .select()
-      .from(userMedia)
-      .where(eq(userMedia.id, metadata.id))
-      .get();
-
-    if (!media) {
-      return c.text('No media found for the provided identifier', 404);
-    }
-
     const allowedBuckets = Object.keys(c.env).filter((k) =>
       k.endsWith('_BUCKET')
     ) as BucketBindings<Env>[];
@@ -213,15 +203,27 @@ Media.openapi(MediaDelete, async (c: Context) => {
     }
 
     const r2 = c.env[metadata.bucket as BucketBindings<Env>];
+    const results = [];
 
-    const urlObj = new URL(media.url);
-    const key = urlObj.pathname.slice(1);
+    for (const id of metadata.id) {
+      const media = await db
+        .select()
+        .from(userMedia)
+        .where(eq(userMedia.id, id))
+        .get();
 
-    await r2.delete(key);
+      if (!media) {
+        results.push({ id, status: 'No media found for the provided identifier', code: 404 });
+        continue;
+      }
 
-    await db.delete(userMedia).where(eq(userMedia.id, metadata.id));
+      const key = new URL(media.url).pathname.slice(1);
+      await r2.delete(key);
+      await db.delete(userMedia).where(eq(userMedia.id, id));
 
-    return c.text('Delete successful', 200);
+      results.push({ id, status: 'Deleted', code: 200 });
+    }
+    return c.json(results, 200);
 
   } catch (err) {
     console.error('Delete error:', err);

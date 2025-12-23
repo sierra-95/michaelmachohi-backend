@@ -133,8 +133,14 @@ export const MediaDelete = createRoute({
         200:{
             description : "Delete successful",
             content: {
-                'text/plain': {
-                    schema: z.string()
+                'application/json': {
+                    schema: z.array(
+                        z.object({
+                            id: z.uuid(),
+                            status: z.string(),
+                            code: z.number()
+                        })
+                    )
                 }
             }
         },

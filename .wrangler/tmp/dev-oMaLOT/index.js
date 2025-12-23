@@ -25148,9 +25148,10 @@ var GetUserMediaResponseSchema = UserMediaSchema.omit({
   size_bytes: external_exports.number()
 }).openapi("Media Schema: GET Response");
 var DeleteUserMediaSchema = UserMediaSchema.pick({
-  id: true,
   bucket: true,
   bucket_url: true
+}).extend({
+  id: external_exports.array(external_exports.uuid())
 }).openapi("Media Schema: DELETE");
 
 // src/openapi/media.ts
@@ -25284,8 +25285,14 @@ var MediaDelete = createRoute({
     200: {
       description: "Delete successful",
       content: {
-        "text/plain": {
-          schema: external_exports.string()
+        "application/json": {
+          schema: external_exports.array(
+            external_exports.object({
+              id: external_exports.uuid(),
+              status: external_exports.string(),
+              code: external_exports.number()
+            })
+          )
         }
       }
     },
@@ -25457,10 +25464,6 @@ Media.openapi(MediaDelete, async (c) => {
       bucket_url: body.bucket_url
     });
     const db = getDb(c.env);
-    const media = await db.select().from(userMedia).where(eq(userMedia.id, metadata.id)).get();
-    if (!media) {
-      return c.text("No media found for the provided identifier", 404);
-    }
     const allowedBuckets = Object.keys(c.env).filter(
       (k) => k.endsWith("_BUCKET")
     );
@@ -25468,11 +25471,19 @@ Media.openapi(MediaDelete, async (c) => {
       return c.text("Invalid bucket", 403);
     }
     const r2 = c.env[metadata.bucket];
-    const urlObj = new URL(media.url);
-    const key = urlObj.pathname.slice(1);
-    await r2.delete(key);
-    await db.delete(userMedia).where(eq(userMedia.id, metadata.id));
-    return c.text("Delete successful", 200);
+    const results = [];
+    for (const id of metadata.id) {
+      const media = await db.select().from(userMedia).where(eq(userMedia.id, id)).get();
+      if (!media) {
+        results.push({ id, status: "No media found for the provided identifier", code: 404 });
+        continue;
+      }
+      const key = new URL(media.url).pathname.slice(1);
+      await r2.delete(key);
+      await db.delete(userMedia).where(eq(userMedia.id, id));
+      results.push({ id, status: "Deleted", code: 200 });
+    }
+    return c.json(results, 200);
   } catch (err) {
     console.error("Delete error:", err);
     return c.text("Delete failed", 500);
