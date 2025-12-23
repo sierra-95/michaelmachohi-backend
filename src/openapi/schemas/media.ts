@@ -16,10 +16,26 @@ export const CreateUserMediaSchema = UserMediaSchema.omit({
   id: true,
   url: true,
   created_at: true,
-}).openapi('Upload Media Schema');
+}).openapi('Media Schema: POST');
+
+export const GetUserMediaSchema = UserMediaSchema.pick({
+  user_id: true,
+  anonymous_id: true,
+}).openapi('Media Schema: GET');
+
+export const GetUserMediaResponseSchema = UserMediaSchema.omit({
+  bucket: true,
+  bucket_url: true,
+  files: true,
+}).extend({
+  original_name: z.string(),
+  mime_type: z.string(),
+  size_bytes: z.number(),
+
+}).openapi('Media Schema: GET Response');
 
 export const DeleteUserMediaSchema = UserMediaSchema.pick({
   id: true,
   bucket: true,
   bucket_url: true,
-}).openapi('Delete Media Schema');
+}).openapi('Media Schema: DELETE');

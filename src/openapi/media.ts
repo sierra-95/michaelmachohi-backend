@@ -1,5 +1,53 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { CreateUserMediaSchema, DeleteUserMediaSchema } from './schemas/media';
+import { CreateUserMediaSchema, DeleteUserMediaSchema, GetUserMediaSchema, GetUserMediaResponseSchema } from './schemas/media';
+
+export const MediaGet = createRoute({
+  method: 'get',
+  path: '/fetch',
+  tags: ['Media'],
+  request: {
+    query: GetUserMediaSchema
+  },
+  responses: {
+        200: {
+            description: 'Media fetched successfully',
+            content: {
+                'application/json': {
+                    schema: z.object({
+                        Audio: z.array(GetUserMediaResponseSchema),
+                        Documents: z.array(GetUserMediaResponseSchema),
+                        Images: z.array(GetUserMediaResponseSchema),
+                        Videos: z.array(GetUserMediaResponseSchema),
+                    })
+                }
+            }
+        },
+        400:{
+            description : "Bad Request",
+            content: {
+                'text/plain': {
+                    schema: z.string()
+                }
+            }
+        },
+        401:{
+            description : "Unauthorized: Missing user identification",
+            content: {
+                'text/plain': {
+                    schema: z.string()
+                }
+            }
+        },
+        500:{
+            description : "Internal Server Error",
+            content: {
+                'text/plain': {
+                    schema: z.string()
+                }
+            }
+        },
+    }
+});
 
 export const MediaUpload = createRoute({
   method: 'post',
@@ -33,7 +81,7 @@ export const MediaUpload = createRoute({
             }
         },
         401:{
-            description : "User Information unavailable",
+            description : "Unauthorized: Missing user identification",
             content: {
                 'text/plain': {
                     schema: z.string()

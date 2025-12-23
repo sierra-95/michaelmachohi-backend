@@ -5,10 +5,85 @@ import {eq} from 'drizzle-orm'
 //#######################################
 import {getDb} from '../db/engine/client';
 import {userMedia} from '../db/schema';
-import {MediaUpload, MediaDelete} from '../openapi/media';
-import { CreateUserMediaSchema, DeleteUserMediaSchema } from '../openapi/schemas/media';
+import {MediaUpload, MediaDelete, MediaGet} from '../openapi/media';
+import { CreateUserMediaSchema, DeleteUserMediaSchema, GetUserMediaSchema } from '../openapi/schemas/media';
 
 const Media = new OpenAPIHono<{ Bindings: Env ; Variables: Variables }>()
+
+
+Media.openapi(MediaGet, async (c: Context) => {
+  try {
+    const query = c.req.query();
+
+    const metadata = GetUserMediaSchema.parse({
+      user_id: query.user_id,
+      anonymous_id: query.anonymous_id,
+    });
+
+    if (metadata.user_id && metadata.anonymous_id) {
+      return c.text('Only one unique id is required', 400);
+    }
+
+    if (!metadata.user_id && !metadata.anonymous_id) {
+      return c.text('user_id or anonymous_id is required', 401);
+    }
+
+    const db = getDb(c.env);
+
+    let media;
+    if (metadata.user_id) {
+      media = await db
+        .select()
+        .from(userMedia)
+        .where(eq(userMedia.user_id, metadata.user_id));
+    } else {
+      const anonymousId = metadata.anonymous_id as string;
+      media = await db
+        .select()
+        .from(userMedia)
+        .where(eq(userMedia.anonymous_id, anonymousId));
+    }
+
+    const result = {
+      Audio: [] as typeof media,
+      Documents: [] as typeof media,
+      Images: [] as typeof media,
+      Videos: [] as typeof media,
+    };
+
+    for (const item of media) {
+      const ext = item.url.split('.').pop()?.toLowerCase();
+
+      if (!ext) continue;
+
+      if (['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a', 'webm'].includes(ext)) {
+        result.Audio.push(item);
+        continue;
+      }
+
+      if (['mp4', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'webm'].includes(ext)) {
+        result.Videos.push(item);
+        continue;
+      }
+
+      if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif'].includes(ext)) {
+        result.Images.push(item);
+        continue;
+      }
+
+      if (ext === 'pdf') {
+        result.Documents.push(item);
+        continue;
+      }
+    }
+
+    return c.json(result, 200);
+
+  } catch (err) {
+    console.error('Get media error:', err);
+    return c.text('Failed to fetch media', 500);
+  }
+});
 
 Media.openapi(MediaUpload, async (c: Context) => {
   try {
@@ -100,8 +175,7 @@ Media.openapi(MediaUpload, async (c: Context) => {
     console.error('Upload error:', err)
     return c.text('Upload failed', 500)
   }
-})
-
+});
 
 Media.openapi(MediaDelete, async (c: Context) => {
   try {

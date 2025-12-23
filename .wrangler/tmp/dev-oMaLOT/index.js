@@ -25133,14 +25133,74 @@ var CreateUserMediaSchema = UserMediaSchema.omit({
   id: true,
   url: true,
   created_at: true
-}).openapi("Upload Media Schema");
+}).openapi("Media Schema: POST");
+var GetUserMediaSchema = UserMediaSchema.pick({
+  user_id: true,
+  anonymous_id: true
+}).openapi("Media Schema: GET");
+var GetUserMediaResponseSchema = UserMediaSchema.omit({
+  bucket: true,
+  bucket_url: true,
+  files: true
+}).extend({
+  original_name: external_exports.string(),
+  mime_type: external_exports.string(),
+  size_bytes: external_exports.number()
+}).openapi("Media Schema: GET Response");
 var DeleteUserMediaSchema = UserMediaSchema.pick({
   id: true,
   bucket: true,
   bucket_url: true
-}).openapi("Delete Media Schema");
+}).openapi("Media Schema: DELETE");
 
 // src/openapi/media.ts
+var MediaGet = createRoute({
+  method: "get",
+  path: "/fetch",
+  tags: ["Media"],
+  request: {
+    query: GetUserMediaSchema
+  },
+  responses: {
+    200: {
+      description: "Media fetched successfully",
+      content: {
+        "application/json": {
+          schema: external_exports.object({
+            Audio: external_exports.array(GetUserMediaResponseSchema),
+            Documents: external_exports.array(GetUserMediaResponseSchema),
+            Images: external_exports.array(GetUserMediaResponseSchema),
+            Videos: external_exports.array(GetUserMediaResponseSchema)
+          })
+        }
+      }
+    },
+    400: {
+      description: "Bad Request",
+      content: {
+        "text/plain": {
+          schema: external_exports.string()
+        }
+      }
+    },
+    401: {
+      description: "Unauthorized: Missing user identification",
+      content: {
+        "text/plain": {
+          schema: external_exports.string()
+        }
+      }
+    },
+    500: {
+      description: "Internal Server Error",
+      content: {
+        "text/plain": {
+          schema: external_exports.string()
+        }
+      }
+    }
+  }
+});
 var MediaUpload = createRoute({
   method: "post",
   path: "/upload",
@@ -25173,7 +25233,7 @@ var MediaUpload = createRoute({
       }
     },
     401: {
-      description: "User Information unavailable",
+      description: "Unauthorized: Missing user identification",
       content: {
         "text/plain": {
           schema: external_exports.string()
@@ -25250,6 +25310,59 @@ var MediaDelete = createRoute({
 
 // src/routes/media.ts
 var Media = new OpenAPIHono();
+Media.openapi(MediaGet, async (c) => {
+  try {
+    const query = c.req.query();
+    const metadata = GetUserMediaSchema.parse({
+      user_id: query.user_id,
+      anonymous_id: query.anonymous_id
+    });
+    if (metadata.user_id && metadata.anonymous_id) {
+      return c.text("Only one unique id is required", 400);
+    }
+    if (!metadata.user_id && !metadata.anonymous_id) {
+      return c.text("user_id or anonymous_id is required", 401);
+    }
+    const db = getDb(c.env);
+    let media;
+    if (metadata.user_id) {
+      media = await db.select().from(userMedia).where(eq(userMedia.user_id, metadata.user_id));
+    } else {
+      const anonymousId = metadata.anonymous_id;
+      media = await db.select().from(userMedia).where(eq(userMedia.anonymous_id, anonymousId));
+    }
+    const result = {
+      Audio: [],
+      Documents: [],
+      Images: [],
+      Videos: []
+    };
+    for (const item of media) {
+      const ext = item.url.split(".").pop()?.toLowerCase();
+      if (!ext) continue;
+      if (["mp3", "wav", "ogg", "aac", "flac", "m4a", "webm"].includes(ext)) {
+        result.Audio.push(item);
+        continue;
+      }
+      if (["mp4", "mov", "avi", "mkv", "flv", "wmv", "webm"].includes(ext)) {
+        result.Videos.push(item);
+        continue;
+      }
+      if (["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "avif"].includes(ext)) {
+        result.Images.push(item);
+        continue;
+      }
+      if (ext === "pdf") {
+        result.Documents.push(item);
+        continue;
+      }
+    }
+    return c.json(result, 200);
+  } catch (err) {
+    console.error("Get media error:", err);
+    return c.text("Failed to fetch media", 500);
+  }
+});
 Media.openapi(MediaUpload, async (c) => {
   try {
     const contentType = c.req.header("content-type") || "";
