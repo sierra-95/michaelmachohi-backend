@@ -75,8 +75,20 @@ export const MediaUpload = createRoute({
         201:{
             description : "Upload successful",
             content: {
-                'text/plain': {
-                    schema: z.string()
+                'application/json': {
+                    schema: z.array(
+                        z.object({
+                            id: z.uuid().optional(),      
+                            user_id: z.string().nullable().optional(),
+                            anonymous_id: z.string().nullable().optional(),
+                            r2_key: z.string().optional(),
+                            url: z.url().optional(),
+                            original_name: z.string(),
+                            mime_type: z.string(),
+                            size_bytes: z.number(),
+                            code: z.number(),
+                        })
+                    )
                 }
             }
         },

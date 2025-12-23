@@ -6,7 +6,7 @@ import {eq} from 'drizzle-orm'
 import {getDb} from '../db/engine/client';
 import {userMedia} from '../db/schema';
 import {MediaUpload, MediaDelete, MediaGet} from '../openapi/media';
-import { CreateUserMediaSchema, DeleteUserMediaSchema, GetUserMediaSchema } from '../openapi/schemas/media';
+import { CreateUserMediaSchema, DeleteUserMediaSchema, GetUserMediaSchema, GetUserMediaResponseSchema } from '../openapi/schemas/media';
 
 const Media = new OpenAPIHono<{ Bindings: Env ; Variables: Variables }>()
 
@@ -136,44 +136,70 @@ Media.openapi(MediaUpload, async (c: Context) => {
 
     const uploadResults = await Promise.all(
       fileArray.map(async (file) => {
-        const uuid = crypto.randomUUID()
-        await r2.put(metadata.r2_key, file.stream(), {
-          httpMetadata: {
-            contentType: file.type,
-          },
-        })
+        try {
+          const uuid = crypto.randomUUID()
+          await r2.put(metadata.r2_key, file.stream(), {
+            httpMetadata: {
+              contentType: file.type,
+            },
+          })
 
-        return {
-          id: uuid,
-          user_id: metadata.user_id || null,
-          anonymous_id: metadata.anonymous_id || null,
-          bucket: metadata.bucket,
-          bucket_url: metadata.bucket_url,
-          r2_key: metadata.r2_key,
-          url: object_url,
-          original_name: file.name,
-          mime_type: file.type,
-          size_bytes: file.size,
+          return {
+            id: uuid,
+            user_id: metadata.user_id || null,
+            anonymous_id: metadata.anonymous_id || null,
+            r2_key: metadata.r2_key,
+            url: object_url,
+            original_name: file.name,
+            mime_type: file.type,
+            size_bytes: file.size,
+            code: 201,
+          }
+        } catch (err) {
+          return {
+            original_name: file.name,
+            mime_type: file.type,
+            size_bytes: file.size,
+            code: 500,
+          }
         }
       })
-    )
-
-    const db = getDb(c.env);
-
-    await db.insert(userMedia).values(
-        uploadResults.map((f) => ({
-            id: f.id,
-            user_id: f.user_id || null,
-            anonymous_id: f.anonymous_id || null,
-            r2_key: f.r2_key,
-            url: f.url,
-            original_name: f.original_name,
-            mime_type: f.mime_type,
-            size_bytes: f.size_bytes,
-        }))
     );
 
-    return c.text('Upload successful', 201)
+    const db = getDb(c.env);
+    const now = new Date().toISOString();
+
+    type UserMediaItem = z.infer<typeof GetUserMediaResponseSchema>;
+    const normalizedUploads = uploadResults.map(f => ({
+      ...f,
+      user_id: f.user_id ?? null,
+      anonymous_id: f.anonymous_id ?? null,
+    }));
+
+    const successfulUploads = normalizedUploads.filter(
+      (f): f is Required<Pick<UserMediaItem, 'id' | 'url' | 'r2_key' | 'original_name' | 'mime_type' | 'size_bytes' | 'user_id' | 'anonymous_id'>> & { code: 201 } =>
+        f.code === 201
+    );
+
+    if (successfulUploads.length === 0) {
+      return c.text('All uploads failed', 500)
+    }else{
+      await db.insert(userMedia).values(
+        successfulUploads.map((f) => ({
+          id: f.id,
+          user_id: f.user_id || null,
+          anonymous_id: f.anonymous_id || null,
+          r2_key: f.r2_key,
+          url: f.url,
+          original_name: f.original_name,
+          mime_type: f.mime_type,
+          size_bytes: f.size_bytes,
+          created_at: now,
+        }))
+      );
+    }
+
+    return c.json(uploadResults, 201)
 
   } catch (err) {
     console.error('Upload error:', err)

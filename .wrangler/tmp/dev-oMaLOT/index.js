@@ -25228,8 +25228,20 @@ var MediaUpload = createRoute({
     201: {
       description: "Upload successful",
       content: {
-        "text/plain": {
-          schema: external_exports.string()
+        "application/json": {
+          schema: external_exports.array(
+            external_exports.object({
+              id: external_exports.uuid().optional(),
+              user_id: external_exports.string().nullable().optional(),
+              anonymous_id: external_exports.string().nullable().optional(),
+              r2_key: external_exports.string().optional(),
+              url: external_exports.url().optional(),
+              original_name: external_exports.string(),
+              mime_type: external_exports.string(),
+              size_bytes: external_exports.number(),
+              code: external_exports.number()
+            })
+          )
         }
       }
     },
@@ -25416,40 +25428,62 @@ Media.openapi(MediaUpload, async (c) => {
     const object_url = metadata.bucket_url + "/" + metadata.r2_key;
     const uploadResults = await Promise.all(
       fileArray.map(async (file2) => {
-        const uuid3 = crypto.randomUUID();
-        await r2.put(metadata.r2_key, file2.stream(), {
-          httpMetadata: {
-            contentType: file2.type
-          }
-        });
-        return {
-          id: uuid3,
-          user_id: metadata.user_id || null,
-          anonymous_id: metadata.anonymous_id || null,
-          bucket: metadata.bucket,
-          bucket_url: metadata.bucket_url,
-          r2_key: metadata.r2_key,
-          url: object_url,
-          original_name: file2.name,
-          mime_type: file2.type,
-          size_bytes: file2.size
-        };
+        try {
+          const uuid3 = crypto.randomUUID();
+          await r2.put(metadata.r2_key, file2.stream(), {
+            httpMetadata: {
+              contentType: file2.type
+            }
+          });
+          return {
+            id: uuid3,
+            user_id: metadata.user_id || null,
+            anonymous_id: metadata.anonymous_id || null,
+            r2_key: metadata.r2_key,
+            url: object_url,
+            original_name: file2.name,
+            mime_type: file2.type,
+            size_bytes: file2.size,
+            code: 201
+          };
+        } catch (err) {
+          return {
+            original_name: file2.name,
+            mime_type: file2.type,
+            size_bytes: file2.size,
+            code: 500
+          };
+        }
       })
     );
     const db = getDb(c.env);
-    await db.insert(userMedia).values(
-      uploadResults.map((f) => ({
-        id: f.id,
-        user_id: f.user_id || null,
-        anonymous_id: f.anonymous_id || null,
-        r2_key: f.r2_key,
-        url: f.url,
-        original_name: f.original_name,
-        mime_type: f.mime_type,
-        size_bytes: f.size_bytes
-      }))
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const normalizedUploads = uploadResults.map((f) => ({
+      ...f,
+      user_id: f.user_id ?? null,
+      anonymous_id: f.anonymous_id ?? null
+    }));
+    const successfulUploads = normalizedUploads.filter(
+      (f) => f.code === 201
     );
-    return c.text("Upload successful", 201);
+    if (successfulUploads.length === 0) {
+      return c.text("All uploads failed", 500);
+    } else {
+      await db.insert(userMedia).values(
+        successfulUploads.map((f) => ({
+          id: f.id,
+          user_id: f.user_id || null,
+          anonymous_id: f.anonymous_id || null,
+          r2_key: f.r2_key,
+          url: f.url,
+          original_name: f.original_name,
+          mime_type: f.mime_type,
+          size_bytes: f.size_bytes,
+          created_at: now
+        }))
+      );
+    }
+    return c.json(uploadResults, 201);
   } catch (err) {
     console.error("Upload error:", err);
     return c.text("Upload failed", 500);
