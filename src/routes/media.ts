@@ -214,7 +214,6 @@ Media.openapi(MediaDelete, async (c: Context) => {
     const metadata = DeleteUserMediaSchema.parse({
       id: body.id,
       bucket: body.bucket,
-      bucket_url: body.bucket_url,
     })
 
     const db = getDb(c.env);
@@ -242,9 +241,7 @@ Media.openapi(MediaDelete, async (c: Context) => {
         results.push({ id, status: 'No media found for the provided identifier', code: 404 });
         continue;
       }
-
-      const key = new URL(media.url).pathname.slice(1);
-      await r2.delete(key);
+      await r2.delete(media.r2_key);
       await db.delete(userMedia).where(eq(userMedia.id, id));
 
       results.push({ id, status: 'Deleted', code: 200 });

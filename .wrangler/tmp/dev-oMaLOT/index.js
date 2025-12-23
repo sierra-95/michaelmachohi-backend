@@ -25148,8 +25148,7 @@ var GetUserMediaResponseSchema = UserMediaSchema.omit({
   size_bytes: external_exports.number()
 }).openapi("Media Schema: GET");
 var DeleteUserMediaSchema = UserMediaSchema.pick({
-  bucket: true,
-  bucket_url: true
+  bucket: true
 }).extend({
   id: external_exports.array(external_exports.uuid())
 }).openapi("Media Schema: DELETE");
@@ -25494,8 +25493,7 @@ Media.openapi(MediaDelete, async (c) => {
     const body = await c.req.json();
     const metadata = DeleteUserMediaSchema.parse({
       id: body.id,
-      bucket: body.bucket,
-      bucket_url: body.bucket_url
+      bucket: body.bucket
     });
     const db = getDb(c.env);
     const allowedBuckets = Object.keys(c.env).filter(
@@ -25512,8 +25510,7 @@ Media.openapi(MediaDelete, async (c) => {
         results.push({ id, status: "No media found for the provided identifier", code: 404 });
         continue;
       }
-      const key = new URL(media.url).pathname.slice(1);
-      await r2.delete(key);
+      await r2.delete(media.r2_key);
       await db.delete(userMedia).where(eq(userMedia.id, id));
       results.push({ id, status: "Deleted", code: 200 });
     }

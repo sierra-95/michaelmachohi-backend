@@ -36,7 +36,6 @@ export const GetUserMediaResponseSchema = UserMediaSchema.omit({
 
 export const DeleteUserMediaSchema = UserMediaSchema.pick({
   bucket: true,
-  bucket_url: true,
 }).extend({
   id: z.array(z.uuid())
 }).openapi('Media Schema: DELETE');
