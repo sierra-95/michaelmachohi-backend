@@ -28,6 +28,7 @@ app.get(
     theme: 'bluePlanet',
     hideDarkModeToggle: true,
     persistAuth: true,
+    favicon: 'https://files.michaelmachohi.com/logos/michaelmachohi.favicon.png',
   })
 );
 app.use('*',
