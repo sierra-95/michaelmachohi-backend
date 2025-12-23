@@ -1,4 +1,4 @@
-import { z } from '@hono/zod-openapi';
+import { z } from 'zod';
 
 export const UserMediaSchema = z.object({
   id: z.string(),
@@ -8,25 +8,12 @@ export const UserMediaSchema = z.object({
   bucket_url: z.url(),
   r2_key: z.string(),
   url: z.url(),
-  original_name: z.string(),
-  mime_type: z.string().openapi({
-    example: 'image/png',
-  }),
-
-  size_bytes: z.number().int().openapi({
-    example: 345678,
-  }),
-
-  created_at: z.string().openapi({
-    example: '2025-09-23T12:34:56Z',
-  }),
+  files: z.any().optional(),
+  created_at: z.string()
 }).openapi('UserMedia');
 
 export const CreateUserMediaSchema = UserMediaSchema.omit({
   id: true,
   url: true,
-  original_name: true,
-  mime_type: true,
-  size_bytes: true,
   created_at: true,
 }).openapi('Upload Media Schema');

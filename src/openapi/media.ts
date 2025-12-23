@@ -25,7 +25,23 @@ export const MediaUpload = createRoute({
             }
         },
         400:{
-            description : "Upload failed",
+            description : "Bad Request",
+            content: {
+                'text/plain': {
+                    schema: z.string()
+                }
+            }
+        },
+        401:{
+            description : "User Information unavailable",
+            content: {
+                'text/plain': {
+                    schema: z.string()
+                }
+            }
+        },
+        403:{
+            description : "Access to bucket forbidden",
             content: {
                 'text/plain': {
                     schema: z.string()
@@ -33,7 +49,7 @@ export const MediaUpload = createRoute({
             }
         },
         500:{
-            description : "Upload failed",
+            description : "Internal Server Error",
             content: {
                 'text/plain': {
                     schema: z.string()

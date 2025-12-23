@@ -38,15 +38,16 @@ Media.openapi(MediaUpload, async (c: Context) => {
     }
 
     if (!metadata.user_id && !metadata.anonymous_id) {
-        return c.text('Either user_id or anonymous_id must be provided', 400)
+        return c.text('Either user_id or anonymous_id must be provided', 401)
     }
 
-    const allowedBuckets: BucketBindings<Env>[] = Object.keys(c.env).filter(
-        (k) => (c.env as any)[k] instanceof R2Bucket
-    ) as BucketBindings<Env>[]
+    const allowedBuckets = Object.keys(c.env).filter((k) =>
+      k.endsWith('_BUCKET')
+    ) as BucketBindings<Env>[];
+
 
     if (!allowedBuckets.includes(metadata.bucket as any)) {
-        return c.text('Invalid bucket', 400)
+        return c.text('Invalid bucket', 403)
     }
 
     const r2 = c.env[metadata.bucket as BucketBindings<Env>]
@@ -64,8 +65,8 @@ Media.openapi(MediaUpload, async (c: Context) => {
 
         return {
           id: uuid,
-          user_id: metadata.user_id,
-          anonymous_id: metadata.anonymous_id,
+          user_id: metadata.user_id || null,
+          anonymous_id: metadata.anonymous_id || null,
           bucket: metadata.bucket,
           bucket_url: metadata.bucket_url,
           r2_key: metadata.r2_key,

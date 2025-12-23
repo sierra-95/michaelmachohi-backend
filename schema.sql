@@ -19,9 +19,9 @@ CREATE TABLE IF NOT EXISTS user_media (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-INSERT INTO users (id, email, password)
-VALUES (
-  'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-  '2025agvrobotics.team@gmail.com',
-  '@team2025'
-);
+-- INSERT INTO users (id, email, password)
+-- VALUES (
+--   'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+--   '2025agvrobotics.team@gmail.com',
+--   '@team2025'
+-- );
