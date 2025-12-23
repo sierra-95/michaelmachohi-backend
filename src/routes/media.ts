@@ -57,7 +57,7 @@ Media.openapi(MediaUpload, async (c: Context) => {
     const uploadResults = await Promise.all(
       fileArray.map(async (file) => {
         const uuid = crypto.randomUUID()
-        await r2.put(object_url, file.stream(), {
+        await r2.put(metadata.r2_key, file.stream(), {
           httpMetadata: {
             contentType: file.type,
           },
