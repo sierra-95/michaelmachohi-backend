@@ -25,3 +25,16 @@ CREATE TABLE IF NOT EXISTS user_media (
 --   '2025agvrobotics.team@gmail.com',
 --   '@team2025'
 -- );
+
+-- SELECT 
+--     um.id AS media_id,
+--     um.user_id,
+--     u.email AS user_email,
+--     um.r2_key,
+--     um.url
+-- FROM 
+--     user_media um
+-- INNER JOIN 
+--     users u 
+-- ON 
+--     um.user_id = u.id;
