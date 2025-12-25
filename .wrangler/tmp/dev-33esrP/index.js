@@ -25424,12 +25424,33 @@ Media.openapi(MediaUpload, async (c) => {
       return c.text("Invalid bucket", 403);
     }
     const r2 = c.env[metadata.bucket];
-    const object_url = metadata.bucket_url + "/" + metadata.r2_key;
     const uploadResults = await Promise.all(
       fileArray.map(async (file2) => {
         try {
           const uuid3 = crypto.randomUUID();
-          await r2.put(metadata.r2_key, file2.stream(), {
+          const uuid_2 = crypto.randomUUID();
+          let extension = "";
+          switch (file2.type) {
+            case "image/png":
+              extension = ".png";
+              break;
+            case "image/jpeg":
+              extension = ".jpg";
+              break;
+            case "audio/mpeg":
+              extension = ".mp3";
+              break;
+            case "video/mp4":
+              extension = ".mp4";
+              break;
+            case "application/pdf":
+              extension = ".pdf";
+              break;
+            default:
+              extension = "." + (file2.name.split(".").pop() || "bin");
+          }
+          const r2_key = `${metadata.r2_key}/${uuid3}-${uuid_2}${extension}`;
+          await r2.put(r2_key, file2.stream(), {
             httpMetadata: {
               contentType: file2.type
             }
@@ -25438,8 +25459,8 @@ Media.openapi(MediaUpload, async (c) => {
             id: uuid3,
             user_id: metadata.user_id || null,
             anonymous_id: metadata.anonymous_id || null,
-            r2_key: metadata.r2_key,
-            url: object_url,
+            r2_key,
+            url: metadata.bucket_url + "/" + r2_key,
             original_name: file2.name,
             mime_type: file2.type,
             size_bytes: file2.size,
@@ -25603,7 +25624,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-BEp73w/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-XbJYay/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -25635,7 +25656,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-BEp73w/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-XbJYay/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

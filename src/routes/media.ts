@@ -130,15 +130,37 @@ Media.openapi(MediaUpload, async (c: Context) => {
         return c.text('Invalid bucket', 403)
     }
 
-    const r2 = c.env[metadata.bucket as BucketBindings<Env>]
-    const object_url = metadata.bucket_url + '/' + metadata.r2_key
-
+    const r2 = c.env[metadata.bucket as BucketBindings<Env>];
 
     const uploadResults = await Promise.all(
       fileArray.map(async (file) => {
         try {
-          const uuid = crypto.randomUUID()
-          await r2.put(metadata.r2_key, file.stream(), {
+          const uuid = crypto.randomUUID();
+          const uuid_2 = crypto.randomUUID();
+
+          let extension = '';
+          switch (file.type) {
+            case 'image/png':
+              extension = '.png';
+              break;
+            case 'image/jpeg':
+              extension = '.jpg';
+              break;
+            case 'audio/mpeg':
+              extension = '.mp3';
+              break;
+            case 'video/mp4':
+              extension = '.mp4';
+              break;
+            case 'application/pdf':
+              extension = '.pdf';
+              break;
+            default:
+              extension = '.' + (file.name.split('.').pop() || 'bin');
+          }
+
+          const r2_key = `${metadata.r2_key}/${uuid}-${uuid_2}${extension}`;
+          await r2.put(r2_key, file.stream(), {
             httpMetadata: {
               contentType: file.type,
             },
@@ -148,8 +170,8 @@ Media.openapi(MediaUpload, async (c: Context) => {
             id: uuid,
             user_id: metadata.user_id || null,
             anonymous_id: metadata.anonymous_id || null,
-            r2_key: metadata.r2_key,
-            url: object_url,
+            r2_key: r2_key,
+            url: metadata.bucket_url + '/' + r2_key,
             original_name: file.name,
             mime_type: file.type,
             size_bytes: file.size,
